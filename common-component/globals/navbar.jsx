@@ -14,18 +14,18 @@ import { useState } from "react";
 
 export function CustomNavbar({ children }) {
   const navItems = [
-    {
-      name: "Features",
-      link: "#features",
-    },
-    {
-      name: "Pricing",
-      link: "#pricing",
-    },
-    {
-      name: "Contact",
-      link: "#contact",
-    },
+    // {
+    //   name: "Features",
+    //   link: "#features",
+    // },
+    // {
+    //   name: "Pricing",
+    //   link: "#pricing",
+    // },
+    // {
+    //   name: "Contact",
+    //   link: "#contact",
+    // },
   ];
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -38,8 +38,7 @@ export function CustomNavbar({ children }) {
           <NavbarLogo />
           <NavItems items={navItems} />
           <div className="flex items-center gap-4">
-            <NavbarButton variant="secondary">Login</NavbarButton>
-            <NavbarButton variant="primary">Book a call</NavbarButton>
+            <appkit-button />
           </div>
         </NavBody>
 
@@ -68,20 +67,7 @@ export function CustomNavbar({ children }) {
               </a>
             ))}
             <div className="flex w-full flex-col gap-4">
-              <NavbarButton
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="primary"
-                className="w-full"
-              >
-                Login
-              </NavbarButton>
-              <NavbarButton
-                onClick={() => setIsMobileMenuOpen(false)}
-                variant="primary"
-                className="w-full"
-              >
-                Book a call
-              </NavbarButton>
+              <appkit-button />
             </div>
           </MobileNavMenu>
         </MobileNav>
