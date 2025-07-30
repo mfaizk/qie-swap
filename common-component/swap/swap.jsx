@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/stateful-button";
 import { TokenSelector } from "./token-selector";
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { HistoryModal } from "./history";
+import { GraphModal } from "./graph";
 
 const validationSchema = Yup.object().shape({
   fromValue: Yup.string().required("From value is required"),
@@ -13,6 +15,8 @@ const validationSchema = Yup.object().shape({
 
 const SwapComponent = () => {
   const [openModal, setOpenModal] = useState(false);
+  const [historyModalState, setHistoryModalState] = useState(false);
+  const [graphModal, setGraphModal] = useState(false);
   const formik = useFormik({
     initialValues: {
       fromValue: "",
@@ -27,9 +31,17 @@ const SwapComponent = () => {
   return (
     <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] min-h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d] py-10 relative">
       <div className="w-full flex justify-between items-center px-12">
-        <p className=" text-xs font-light cursor-pointer">Show Graph</p>
+        <p
+          className=" text-xs font-light cursor-pointer"
+          onClick={() => setGraphModal(true)}
+        >
+          Show Graph
+        </p>
         <h2 className="text-2xl font-semibold">Trade Token</h2>
-        <IconHistory className="cursor-pointer" />
+        <IconHistory
+          className="cursor-pointer"
+          onClick={() => setHistoryModalState(true)}
+        />
       </div>
 
       <div className="flex flex-col items-center justify-center gap-4">
@@ -106,6 +118,11 @@ const SwapComponent = () => {
         </Button>
       </div>
       <TokenSelector openModal={openModal} setOpenModal={setOpenModal} />
+      <HistoryModal
+        openModal={historyModalState}
+        setOpenModal={setHistoryModalState}
+      />
+      <GraphModal openModal={graphModal} setOpenModal={setGraphModal} />
     </div>
   );
 };
