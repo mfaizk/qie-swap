@@ -3,6 +3,7 @@ import "./globals.css";
 import BlockChainProvider from "@/providers/blockchain-provider";
 import { headers } from "next/headers";
 import { CustomNavbar } from "@/common-component/globals/navbar";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,7 @@ export default async function RootLayout({ children }) {
         <CustomNavbar>
           <BlockChainProvider cookies={cookies}>{children}</BlockChainProvider>
         </CustomNavbar>
+        <Toaster />
       </body>
     </html>
   );

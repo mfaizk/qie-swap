@@ -11,9 +11,40 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { token, WQIE_address } from "@/config/blockchain";
+import { useTokenList } from "@/service/queries";
 import { IconX } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { useConfig, useReadContracts } from "wagmi";
 
-export function TokenSelector({ openModal, setOpenModal }) {
+export function TokenSelector({
+  openModal,
+  setOpenModal,
+  onChange,
+  currentToken,
+  toToken,
+}) {
+  const [searchToken, setSearchToken] = useState("");
+  const config = useConfig();
+  const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
+
+  const tokenList = useMemo(() => {
+    if (currentToken?.address || toToken?.address) {
+      return tokenListData?.filter((item) => {
+        if (
+          item?.address == currentToken?.address ||
+          item?.address == toToken?.address
+        ) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    return tokenListData;
+  }, [tokenListData, currentToken, toToken]);
+  console.log(tokenList, tokenListData, "zxczxcaf");
+
   return (
     <AlertDialog open={openModal} onOpenChange={(val) => setOpenModal(val)}>
       <AlertDialogContent>
@@ -32,19 +63,28 @@ export function TokenSelector({ openModal, setOpenModal }) {
         </AlertDialogHeader>
         <AlertDialogFooter className={"flex flex-col"}>
           <div className="flex flex-col items-center justify-center w-full gap-10">
-            <Input placeholder="Search token" className={"w-full"} />
-            <div className="w-full flex flex-col gap-2">
-              {Array(10)
-                ?.fill("i")
-                ?.map((item, idx) => {
-                  return (
-                    <div key={idx} className="w-full  py-2">
-                      <p className="text-xs" key={idx}>
-                        BTC
-                      </p>
-                    </div>
-                  );
-                })}
+            <div className="w-full flex flex-col gap-2 max-h-96 overflow-auto">
+              {tokenList?.map((item, idx) => {
+                return (
+                  <div
+                    key={idx}
+                    className="w-full  py-2 flex gap-2 items-center cursor-pointer"
+                    onClick={() => {
+                      if (onChange) {
+                        onChange(item);
+                      }
+                    }}
+                  >
+                    <img
+                      src={item?.logoURI}
+                      className="object-contain h-4 w-4"
+                    />
+                    <p className="text-md" key={idx}>
+                      {item?.name}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
           {/* <AlertDialogCancel>Cancel</AlertDialogCancel>
