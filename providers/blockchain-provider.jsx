@@ -7,7 +7,7 @@ import { mainnet, arbitrum } from "@reown/appkit/networks";
 import React from "react";
 import { cookieToInitialState, WagmiProvider } from "wagmi";
 
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 if (!projectId) {
   throw new Error("Project ID is not defined");

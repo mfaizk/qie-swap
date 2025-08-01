@@ -7,6 +7,9 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useAccount } from "wagmi";
+import { addLiquidityERC20Pair } from "@/service/queries";
+import { useEthersSigner } from "@/hooks/useEthersSigner";
+import { useEthersProvider } from "@/hooks/useEthersProvider";
 
 const validationSchema = Yup.object().shape({
   fromValue: Yup.string().required("From value is required"),
@@ -16,6 +19,8 @@ const Liquidity = () => {
   const [openModalFrom, setOpenModalFrom] = useState(false);
   const [openModalTo, setOpenModalTo] = useState(false);
   const { address } = useAccount();
+  const signer = useEthersSigner();
+  const provider = useEthersProvider();
   const formik = useFormik({
     initialValues: {
       fromValue: "",
@@ -25,7 +30,7 @@ const Liquidity = () => {
     },
     validationSchema: validationSchema,
     onSubmit: (values) => {
-      alert(JSON.stringify(values, null, 2));
+      submissionHandler();
     },
   });
 
@@ -42,6 +47,30 @@ const Liquidity = () => {
     chainId: formik?.values?.toCurrency?.chainId,
     rpcUrl: "https://rpc1mainnet.qie.digital",
   });
+  const submissionHandler = async () => {
+    try {
+      if (
+        formik?.values?.fromCurrency?.address &&
+        formik?.values?.toCurrency?.address
+      ) {
+        console.log("hitted");
+
+        const hash = await addLiquidityERC20Pair({
+          account: address,
+          amountA: formik?.values?.fromValue,
+          amountB: formik?.values?.toValue,
+          provider: provider,
+          signer: signer,
+          slippage: 1,
+          tokenA: formik?.values?.fromCurrency,
+          tokenB: formik?.values?.toCurrency,
+        });
+        console.log(hash, "asdasdasd");
+      }
+    } catch (error) {
+      console.log(error, "error in add liquidity");
+    }
+  };
 
   return (
     <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d]">

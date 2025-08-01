@@ -10,6 +10,7 @@ import { ethers } from "ethers";
 import { uploadTokenLogo } from "@/service/queries";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { queryClient } from "@/providers/blockchain-provider";
 
 const validationSchema = Yup.object().shape({
   address: Yup.string().required("From value is required"),
@@ -57,6 +58,7 @@ const AddToken = () => {
       });
     },
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["tokens"] });
       if (data?.success) {
         toast.success("Token added.");
         formik?.resetForm();

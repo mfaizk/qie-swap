@@ -23,6 +23,8 @@ export function TokenSelector({
   onChange,
   currentToken,
   toToken,
+  type,
+  fromType,
 }) {
   const [searchToken, setSearchToken] = useState("");
   const config = useConfig();
@@ -42,8 +44,7 @@ export function TokenSelector({
     }
 
     return tokenListData;
-  }, [tokenListData, currentToken, toToken]);
-  console.log(tokenList, tokenListData, "zxczxcaf");
+  }, [tokenListData, currentToken, toToken, type, fromType]);
 
   return (
     <AlertDialog open={openModal} onOpenChange={(val) => setOpenModal(val)}>
