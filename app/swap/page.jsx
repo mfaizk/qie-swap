@@ -20,16 +20,28 @@ const Swap = () => {
             <TabsTrigger value="add-token">Add Token</TabsTrigger>
             <TabsTrigger value="native-swap">Native Swap</TabsTrigger>
           </TabsList>
-          <TabsContent value="swap" className={"w-full"}>
+          <TabsContent
+            value="swap"
+            className={"w-full flex justify-center items-center"}
+          >
             <SwapComponent />
           </TabsContent>
-          <TabsContent value="liquidity" className={"w-full"}>
+          <TabsContent
+            value="liquidity"
+            className={"w-full flex justify-center items-center"}
+          >
             <Liquidity />
           </TabsContent>
-          <TabsContent value="add-token" className={"w-full"}>
+          <TabsContent
+            value="add-token"
+            className={"w-full flex justify-center items-center"}
+          >
             <AddToken />
           </TabsContent>
-          <TabsContent value="native-swap" className={"w-full"}>
+          <TabsContent
+            value="native-swap"
+            className={"w-full flex justify-center items-center"}
+          >
             <NativeSwap />
           </TabsContent>
         </Tabs>

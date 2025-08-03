@@ -104,7 +104,7 @@ const AddToken = () => {
   }
 
   return (
-    <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] min-h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d]">
+    <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 px-8 w-[95%] sm sm:w-full md:w-[600px] min-h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d] py-10 relative ">
       <div className=" w-full items-center justify-center flex">
         <h2 className="text-2xl font-semibold">Add Token</h2>
       </div>
