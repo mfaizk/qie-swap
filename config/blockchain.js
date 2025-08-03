@@ -55,12 +55,15 @@ export const ChainConfig = appConfigurations.map((config) =>
 );
 
 export const QIDEX_Factory_address =
-  "0xba33504bD33eF3731Cf8f59F755b289abb88F177";
+  "0x6fC6BceA03D053F6ccABe3F6E6813eC0a8406Ef2";
+
 export const WQIE_address = "0x0087904D95BEe9E5F24dc8852804b547981A9139";
+
 export const QIEDEXRouter_address =
-  "0x807667fe19f1D8Ee2265b2Ce2341130AF423cBD2";
+  "0xf2D37952151Aefebe50aE79Fd0d7c6f57d458056";
+
 export const INIT_CODE =
-  "0xa4338cf2371c14c49fa8b5e1b8fcb50ed7a9bd026afb72bf9f3f45186cf54315";
+  "0x6684e59fe67f8de183172c6fd65c0449d87bde76f4486ce073b2413dad2103d1";
 
 export const token = [
   {
