@@ -25,11 +25,6 @@ import { waitForTransactionReceipt, writeContract } from "@wagmi/core";
 import { toast } from "sonner";
 import { maskValue } from "@/utils";
 
-const validationSchema = Yup.object().shape({
-  fromValue: Yup.string().required("From value is required"),
-  toValue: Yup.string().required("To value is required"),
-});
-
 const BUTTON_STATES = {
   INSUFFICIENT_LIQUIDITY: "INSUFFICIENT LIQUIDITY",
   PAIR_NOT_EXIST: "PAIR NOT EXIST",
@@ -43,11 +38,22 @@ const NativeSwap = () => {
   const config = useConfig();
   const [currentTx, setCurrentTx] = useState("");
   const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
+  const [formBalanceState, setFormBalanceState] = useState(0);
+
   const {
     writeContractAsync,
     status,
     isPending: writeContractPending,
   } = useWriteContract({});
+
+  const validationSchema = Yup.object().shape({
+    fromValue: Yup.string()
+      .required("Value is required")
+      .test("insufficient-balance", "Insufficient balance", function (value) {
+        return !value || Number(value) <= Number(formBalanceState);
+      }),
+    toValue: Yup.string().required("Value is required"),
+  });
   const formik = useFormik({
     initialValues: {
       fromValue: "",
@@ -64,7 +70,6 @@ const NativeSwap = () => {
   const fromTokenList = useMemo(() => {
     return [WQIE_TOKEN, QIE_TOKEN];
   }, [tokenListData, formik?.values?.fromCurrency, formik?.values?.toCurrency]);
-
   const {
     balance: fromBalance,
     error,
@@ -76,6 +81,9 @@ const NativeSwap = () => {
     chainId: formik?.values?.fromCurrency?.chainId,
     rpcUrl: QIE_BLOCKCHAIN_CONFIG?.rpc,
   });
+  useEffect(() => {
+    setFormBalanceState(fromBalance);
+  }, [fromBalance]);
 
   const { balance: toBalance, refetch: refecthToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
@@ -83,7 +91,6 @@ const NativeSwap = () => {
     chainId: formik?.values?.toCurrency?.chainId,
     rpcUrl: QIE_BLOCKCHAIN_CONFIG?.rpc,
   });
-
   const submissionHandler = async () => {
     try {
       if (formik?.values?.fromCurrency?.symbol == "QIE") {
@@ -205,7 +212,7 @@ const NativeSwap = () => {
               {formik.values?.fromCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.fromCurrency?.icon}
+                    src={formik.values?.fromCurrency?.logoURI}
                     alt=""
                     className="object-contain h-4"
                   />
@@ -247,7 +254,7 @@ const NativeSwap = () => {
               {formik.values?.toCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.toCurrency?.icon}
+                    src={formik.values?.toCurrency?.logoURI}
                     alt=""
                     className="object-contain h-4"
                   />
@@ -261,7 +268,7 @@ const NativeSwap = () => {
             </div>
             <Input
               name="toValue"
-              onChange={formik.handleChange}
+              // onChange={formik.handleChange}
               value={formik.values.toValue}
               type="text"
               placeholder="0.00"
@@ -271,9 +278,9 @@ const NativeSwap = () => {
           <div className="px-2 flex justify-between items-center">
             <p className="text-xs text-red-500"> {formik?.errors?.toValue}</p>
             <div className="flex gap-2">
-              <p className="text-xs">
+              {/* <p className="text-xs">
                 {toBalance} {formik?.values?.toCurrency?.symbol}
-              </p>
+              </p> */}
               <button className="text-xs">Max</button>
             </div>
           </div>
