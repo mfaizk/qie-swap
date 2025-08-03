@@ -9,24 +9,23 @@ if (!projectId) {
   throw new Error("Project ID is not defined");
 }
 
-export const appConfigurations = [
-  {
-    rpc: "https://rpc1mainnet.qie.digital",
-    caipNetworkId: "eip155:1990",
-    chainNamespace: "eip155",
-    explorerName: "QIE Mainnet",
-    explorerUrl: "https://mainnet.qie.digital",
-    chainId: 1990,
-    chainName: "QIE Mainnet",
+export const QIE_BLOCKCHAIN_CONFIG = {
+  rpc: "https://rpc1mainnet.qie.digital",
+  caipNetworkId: "eip155:1990",
+  chainNamespace: "eip155",
+  explorerName: "QIE Mainnet",
+  explorerUrl: "https://mainnet.qie.digital",
+  chainId: 1990,
+  chainName: "QIE Mainnet",
 
-    nativeCurrency: {
-      decimals: 18,
-      name: "QIE",
-      symbol: "QIE",
-    },
-    multicall3Address: "0x7E055DfaF148023A7B273e1F71014Caf34598b3D",
+  nativeCurrency: {
+    decimals: 18,
+    name: "QIE",
+    symbol: "QIE",
   },
-];
+  multicall3Address: "0x7E055DfaF148023A7B273e1F71014Caf34598b3D",
+};
+export const appConfigurations = [QIE_BLOCKCHAIN_CONFIG];
 
 export const ChainConfig = appConfigurations.map((config) =>
   defineChain({

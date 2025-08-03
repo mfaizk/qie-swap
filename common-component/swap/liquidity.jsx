@@ -7,7 +7,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useAccount } from "wagmi";
-import { addLiquidityERC20Pair } from "@/service/queries";
+import { addLiquidityERC20Pair, useTokenList } from "@/service/queries";
 import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
 

@@ -32,30 +32,6 @@ export const Button = ({ className, children, ...props }) => {
         duration: 0.2,
       }
     );
-    await animate(
-      ".check",
-      {
-        width: "20px",
-        scale: 1,
-        display: "block",
-      },
-      {
-        duration: 0.2,
-      }
-    );
-
-    await animate(
-      ".check",
-      {
-        width: "0px",
-        scale: 0,
-        display: "none",
-      },
-      {
-        delay: 2,
-        duration: 0.2,
-      }
-    );
   };
 
   const handleClick = async (event) => {
@@ -88,7 +64,7 @@ export const Button = ({ className, children, ...props }) => {
     >
       <motion.div layout className="flex items-center gap-2">
         <Loader />
-        <CheckIcon />
+        {/* <CheckIcon /> */}
         <motion.span layout>{children}</motion.span>
       </motion.div>
     </motion.button>

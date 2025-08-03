@@ -15,6 +15,7 @@ import { useEthersProvider } from "@/hooks/useEthersProvider";
 import { Contract, formatEther, parseUnits } from "ethers";
 import WQIAbi from "@/abi/wqieABI.json";
 import {
+  QIE_BLOCKCHAIN_CONFIG,
   QIE_TOKEN,
   QIEDEXRouter_address,
   WQIE_address,
@@ -73,14 +74,14 @@ const NativeSwap = () => {
     tokenAddress: formik?.values?.fromCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.fromCurrency?.chainId,
-    rpcUrl: "https://rpc1mainnet.qie.digital",
+    rpcUrl: QIE_BLOCKCHAIN_CONFIG?.rpc,
   });
 
   const { balance: toBalance, refetch: refecthToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.toCurrency?.chainId,
-    rpcUrl: "https://rpc1mainnet.qie.digital",
+    rpcUrl: QIE_BLOCKCHAIN_CONFIG?.rpc,
   });
 
   const submissionHandler = async () => {
