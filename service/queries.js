@@ -42,26 +42,9 @@ export const useTokenList = () => {
     queryKey: ["tokens"],
     select: (data) => {
       if (data?.status == 200) {
-        return [
-          {
-            chainId: 1990,
-            name: "QIE",
-            symbol: "QIE",
-            decimals: 18,
-            logoURI: "/assets/logo.png",
-          },
-          ...data?.data?.tokens,
-        ];
+        return [...data?.data?.tokens];
       } else {
-        return [
-          {
-            chainId: 1990,
-            name: "QIE",
-            symbol: "QIE",
-            decimals: 18,
-            logoURI: "/assets/logo.png",
-          },
-        ];
+        return [];
       }
     },
     queryFn: () => {
@@ -227,7 +210,6 @@ export async function pairChecker({ tokenA, tokenB, provider }) {
     const pairAddress = await factory.getPair(tokenA.address, tokenB.address);
     const isNewPair =
       pairAddress === "0x0000000000000000000000000000000000000000";
-    console.log(isNewPair, "asdasdacafcaf");
 
     return isNewPair;
   } catch (error) {

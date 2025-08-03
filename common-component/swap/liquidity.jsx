@@ -18,6 +18,8 @@ const validationSchema = Yup.object().shape({
 const Liquidity = () => {
   const [openModalFrom, setOpenModalFrom] = useState(false);
   const [openModalTo, setOpenModalTo] = useState(false);
+  const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
+
   const { address } = useAccount();
   const signer = useEthersSigner();
   const provider = useEthersProvider();
@@ -53,8 +55,6 @@ const Liquidity = () => {
         formik?.values?.fromCurrency?.address &&
         formik?.values?.toCurrency?.address
       ) {
-        console.log("hitted");
-
         const hash = await addLiquidityERC20Pair({
           account: address,
           amountA: formik?.values?.fromValue,
@@ -184,8 +184,7 @@ const Liquidity = () => {
             formik.setFieldValue("fromCurrency", val);
             setOpenModalFrom(false);
           }}
-          currentToken={formik?.values?.fromCurrency}
-          toToken={formik?.values?.toCurrency}
+          tokenList={tokenListData}
         />
       )}
       {openModalTo && (
@@ -196,8 +195,7 @@ const Liquidity = () => {
             formik.setFieldValue("toCurrency", val);
             setOpenModalTo(false);
           }}
-          currentToken={formik?.values?.toCurrency}
-          toToken={formik?.values?.fromCurrency}
+          tokenList={tokenListData}
         />
       )}
     </div>

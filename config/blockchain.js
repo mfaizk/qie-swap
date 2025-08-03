@@ -90,3 +90,19 @@ export const wagmiAdapter = new WagmiAdapter({
 });
 
 export const config = wagmiAdapter.wagmiConfig;
+
+export const QIE_TOKEN = {
+  chainId: 1990,
+  name: "QIE",
+  symbol: "QIE",
+  decimals: 18,
+  logoURI: "/assets/logo.png",
+};
+export const WQIE_TOKEN = {
+  chainId: 1990,
+  name: "WQIE",
+  symbol: "WQIE",
+  decimals: 18,
+  logoURI: "/assets/logo.png",
+  address: WQIE_address,
+};

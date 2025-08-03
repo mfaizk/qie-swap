@@ -4,6 +4,7 @@ import SwapComponent from "@/common-component/swap/swap";
 import Liquidity from "@/common-component/swap/liquidity";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AddToken from "@/common-component/swap/add-token";
+import NativeSwap from "@/common-component/swap/native-swap";
 
 const Swap = () => {
   return (
@@ -17,6 +18,7 @@ const Swap = () => {
             <TabsTrigger value="swap">Swap</TabsTrigger>
             <TabsTrigger value="liquidity">Liquidity</TabsTrigger>
             <TabsTrigger value="add-token">Add Token</TabsTrigger>
+            <TabsTrigger value="native-swap">Native Swap</TabsTrigger>
           </TabsList>
           <TabsContent value="swap" className={"w-full"}>
             <SwapComponent />
@@ -26,6 +28,9 @@ const Swap = () => {
           </TabsContent>
           <TabsContent value="add-token" className={"w-full"}>
             <AddToken />
+          </TabsContent>
+          <TabsContent value="native-swap" className={"w-full"}>
+            <NativeSwap />
           </TabsContent>
         </Tabs>
       </div>

@@ -21,30 +21,10 @@ export function TokenSelector({
   openModal,
   setOpenModal,
   onChange,
-  currentToken,
-  toToken,
-  type,
-  fromType,
+  tokenList,
 }) {
   const [searchToken, setSearchToken] = useState("");
   const config = useConfig();
-  const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
-
-  const tokenList = useMemo(() => {
-    if (currentToken?.address || toToken?.address) {
-      return tokenListData?.filter((item) => {
-        if (
-          item?.address == currentToken?.address ||
-          item?.address == toToken?.address
-        ) {
-          return false;
-        }
-        return true;
-      });
-    }
-
-    return tokenListData;
-  }, [tokenListData, currentToken, toToken, type, fromType]);
 
   return (
     <AlertDialog open={openModal} onOpenChange={(val) => setOpenModal(val)}>
