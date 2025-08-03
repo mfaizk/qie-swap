@@ -243,8 +243,13 @@ const SwapComponent = () => {
               type="text"
               name="fromValue"
               onChange={(e) => {
-                formik.handleChange(e);
-                getToAmount(e?.target?.value);
+                const item = e?.currentTarget?.value;
+                const decimal = 8;
+                const regex = new RegExp(`^(\\d*(\\.\\d{0,${decimal}})?)?$`);
+                if (regex.test(item)) {
+                  formik.handleChange(e);
+                  getToAmount(e?.target?.value);
+                }
               }}
               value={formik.values.fromValue}
               placeholder="0.00"

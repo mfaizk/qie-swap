@@ -228,9 +228,13 @@ const NativeSwap = () => {
               type="text"
               name="fromValue"
               onChange={(e) => {
-                formik.handleChange(e);
                 const val = e?.target?.value;
-                formik.setFieldValue("toValue", val);
+                const decimal = 8;
+                const regex = new RegExp(`^(\\d*(\\.\\d{0,${decimal}})?)?$`);
+                if (regex.test(val)) {
+                  formik.handleChange(e);
+                  formik.setFieldValue("toValue", val);
+                }
               }}
               value={formik.values.fromValue}
               placeholder="0.00"

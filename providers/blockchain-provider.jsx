@@ -14,19 +14,35 @@ if (!projectId) {
 }
 
 const metadata = {
-  name: "appkit-example",
-  description: "AppKit Example",
-  url: "https://appkitexampleapp.com",
-  icons: ["https://avatars.githubusercontent.com/u/179229932"],
+  name: "Your App Name",
+  description: "Your App Description",
+  url: "https://your-app-domain.com",
+  icons: ["/assets/logo.png"],
 };
 
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   projectId,
   networks: [...ChainConfig],
+  allWallets: "HIDE",
+  includeWalletIds: [
+    "c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96",
+  ],
   metadata: metadata,
   features: {
     analytics: true,
+    email: false,
+    socials: [],
+    swaps: false,
+    pay: false,
+    send: false,
+    walletFeaturesOrder: ["receive" | "onramp" | "swaps" | "send"],
+  },
+  themeVariables: {
+    "--w3m-accent": "#ee3379",
+  },
+  chainImages: {
+    1990: "/assets/logo.png",
   },
 });
 

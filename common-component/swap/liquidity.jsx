@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IconArrowsDownUp } from "@tabler/icons-react";
 import { Button } from "@/components/ui/stateful-button";
 import { TokenSelector } from "./token-selector";
@@ -12,14 +12,7 @@ import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
 import Slider, { Range } from "rc-slider";
 import "rc-slider/assets/index.css";
-const validationSchema = Yup.object().shape({
-  fromValue: Yup.string().required("From value is required"),
-  toValue: Yup.string().required("To value is required"),
-  slippage: Yup.number()
-    .required("Slippage is required")
-    .min(0.5, "Slippage must be at least 0.5")
-    .max(1, "Slippage cannot be more than 1"),
-});
+
 const marks = {
   0.5: "0.5",
   1: "1",
@@ -33,6 +26,41 @@ const Liquidity = () => {
   const { address } = useAccount();
   const signer = useEthersSigner();
   const provider = useEthersProvider();
+  const [fromBalanceState, setFromBalanceState] = useState();
+  const [toBalanceState, setToBalanceState] = useState();
+
+  const validationSchema = Yup.object().shape({
+    fromValue: Yup.string()
+      .required("Value is required")
+      .test(
+        "is-positive",
+        "Amount must be greater than 0",
+        (value) => Number(value) > 0
+      )
+      .test(
+        "has-enough-balance",
+        "Insufficient balance",
+        (value) => Number(value) <= Number(fromBalanceState)
+      ),
+    toValue: Yup.string()
+      .required("To value is required")
+
+      .test(
+        "is-positive",
+        "Amount must be greater than 0",
+        (value) => Number(value) > 0
+      )
+      .test(
+        "has-enough-balance",
+        "Insufficient balance",
+        (value) => Number(value) <= Number(toBalanceState)
+      ),
+
+    slippage: Yup.number()
+      .required("Slippage is required")
+      .min(0.5, "Slippage must be at least 0.5")
+      .max(1, "Slippage cannot be more than 1"),
+  });
   const formik = useFormik({
     initialValues: {
       fromValue: "",
@@ -58,12 +86,18 @@ const Liquidity = () => {
     rpcUrl: "https://rpc1mainnet.qie.digital",
   });
 
+  useEffect(() => {
+    setFromBalanceState(fromBalance);
+  }, [fromBalance]);
   const { balance: toBalance, refetch: refetchToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.toCurrency?.chainId,
     rpcUrl: "https://rpc1mainnet.qie.digital",
   });
+  useEffect(() => {
+    setToBalanceState(toBalance);
+  }, [toBalance]);
   const submissionHandler = async () => {
     try {
       setIsLoading(true);
@@ -134,7 +168,15 @@ const Liquidity = () => {
             <Input
               type="text"
               name="fromValue"
-              onChange={formik.handleChange}
+              // onChange={formik.handleChange}
+              onChange={(e) => {
+                const item = e?.currentTarget?.value;
+                const decimal = 8;
+                const regex = new RegExp(`^(\\d*(\\.\\d{0,${decimal}})?)?$`);
+                if (regex.test(item)) {
+                  formik.handleChange(e);
+                }
+              }}
               value={formik.values.fromValue}
               placeholder="0.00"
               className={"h-14 w-full md:w-lg pl-36 md:pl-40"}
@@ -176,7 +218,14 @@ const Liquidity = () => {
             </div>
             <Input
               name="toValue"
-              onChange={formik.handleChange}
+              onChange={(e) => {
+                const item = e?.currentTarget?.value;
+                const decimal = 8;
+                const regex = new RegExp(`^(\\d*(\\.\\d{0,${decimal}})?)?$`);
+                if (regex.test(item)) {
+                  formik.handleChange(e);
+                }
+              }}
               value={formik.values.toValue}
               type="text"
               placeholder="0.00"
