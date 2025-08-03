@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { IconArrowsDownUp, IconHistory } from "@tabler/icons-react";
 import { Button } from "@/components/ui/stateful-button";
 import { TokenSelector } from "./token-selector";
@@ -9,40 +9,26 @@ import { HistoryModal } from "./history";
 import { GraphModal } from "./graph";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useAccount, useConfig } from "wagmi";
+import Slider, { Range } from "rc-slider";
+import "rc-slider/assets/index.css";
 import {
   calculateMinAmountOut,
   checkPairExists,
-  executeTokenSwap,
   getAmountOut,
   getReserves,
-  handleSwapCalculation,
-  pairChecker,
   swapHandler,
-  useMinAmountOut,
   useTokenList,
 } from "@/service/queries";
 import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
-import {
-  Contract,
-  formatEther,
-  formatUnits,
-  parseEther,
-  parseUnits,
-} from "ethers";
-import {
-  QIE_BLOCKCHAIN_CONFIG,
-  QIEDEXRouter_address,
-} from "@/config/blockchain";
-
-import routerAbi from "@/abi/router.json";
-import factoryAbi from "@/abi/factory.json";
-import pairABI from "@/abi/pairABI.json";
-const validationSchema = Yup.object().shape({
-  fromValue: Yup.string().required("From value is required"),
-  toValue: Yup.string().required("To value is required"),
-});
-
+import { formatUnits, parseUnits } from "ethers";
+import { QIE_BLOCKCHAIN_CONFIG } from "@/config/blockchain";
+import { maskValue } from "@/utils";
+import { toast } from "sonner";
+const marks = {
+  0.5: "0.5",
+  1: "1",
+};
 const SwapComponent = () => {
   const [openModalFrom, setOpenModalFrom] = useState(false);
   const [openModalTo, setOpenModalTo] = useState(false);
@@ -52,9 +38,31 @@ const SwapComponent = () => {
   const config = useConfig();
   const signer = useEthersSigner();
   const provider = useEthersProvider();
+  const [fromBalanceState, setFromBalanceState] = useState();
+  const [currentTx, setCurrentTx] = useState("");
   const [buttonState, setbuttonState] = useState({
     isValid: false,
     message: "Swap",
+  });
+
+  const validationSchema = Yup.object().shape({
+    fromValue: Yup.string()
+      .required("value is required")
+      .test(
+        "is-positive",
+        "Amount must be greater than 0",
+        (value) => Number(value) > 0
+      )
+      .test(
+        "has-enough-balance",
+        "Insufficient balance",
+        (value) => Number(value) <= Number(fromBalanceState)
+      ),
+    toValue: Yup.string().required("To value is required"),
+    slippage: Yup.number()
+      .required("Slippage is required")
+      .min(0.5, "Slippage must be at least 0.5")
+      .max(1, "Slippage cannot be more than 1"),
   });
 
   const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
@@ -63,6 +71,7 @@ const SwapComponent = () => {
     initialValues: {
       fromValue: "",
       toValue: "",
+      slippage: 0.5,
       fromCurrency: {},
       toCurrency: {},
     },
@@ -82,6 +91,9 @@ const SwapComponent = () => {
     chainId: formik?.values?.fromCurrency?.chainId,
     rpcUrl: QIE_BLOCKCHAIN_CONFIG.rpc,
   });
+  useEffect(() => {
+    setFromBalanceState(fromBalance);
+  }, [fromBalance]);
 
   const { balance: toBalance, refetch: refetchToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
@@ -102,7 +114,10 @@ const SwapComponent = () => {
         tokenOut,
         provider
       );
-      const minAmountOut = calculateMinAmountOut(expectedAmountOut, 1);
+      const minAmountOut = calculateMinAmountOut(
+        expectedAmountOut,
+        formik?.values?.slippage
+      );
       const amountOutInEther = formatUnits(minAmountOut);
       formik.setFieldValue("toValue", amountOutInEther);
 
@@ -142,7 +157,10 @@ const SwapComponent = () => {
       const toValueInWei = parseUnits(values?.toValue);
 
       const path = [values?.fromCurrency?.address, values?.toCurrency?.address];
-
+      setbuttonState({
+        isValid: false,
+        message: "Please wait...",
+      });
       const tx = await swapHandler({
         account: address,
         amountIn: fromValueInWei,
@@ -151,27 +169,50 @@ const SwapComponent = () => {
         provider: provider,
         signer: signer,
       });
+      setCurrentTx(tx?.hash);
+
       await refetchFromBalance();
       await refetchToBalance();
+      setbuttonState({
+        isValid: true,
+        message: "Swap",
+      });
+      toast.success("Transaction successful");
     } catch (error) {
       console.log(error);
+      toast.error(error?.shortMessage || "Transaction Failed");
+      setbuttonState({
+        isValid: true,
+        message: "Swap",
+      });
     }
   };
 
+  const tokenList = useMemo(() => {
+    return {
+      fromTokenList: tokenListData?.filter(
+        (item) => item?.address != formik?.values?.toCurrency?.address
+      ),
+      toTokenList: tokenListData?.filter(
+        (item) => item?.address != formik?.values?.fromCurrency?.address
+      ),
+    };
+  }, [tokenListData, formik.values]);
+
   return (
     <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] min-h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d] py-10 relative">
-      <div className="w-full flex justify-between items-center px-12">
-        <p
+      <div className="w-full flex justify-center items-center px-12">
+        {/* <p
           className=" text-xs font-light cursor-pointer"
           onClick={() => setGraphModal(true)}
         >
           Show Graph
-        </p>
+        </p> */}
         <h2 className="text-2xl font-semibold">Trade Token</h2>
-        <IconHistory
+        {/* <IconHistory
           className="cursor-pointer"
           onClick={() => setHistoryModalState(true)}
-        />
+        /> */}
       </div>
 
       <div className="flex flex-col items-center justify-center gap-4">
@@ -263,17 +304,46 @@ const SwapComponent = () => {
             </div>
           </div>
         </div>
-        <div className="w-full my-10 flex flex-col gap-2">
-          <div className="flex flex-row justify-between items-center w-full">
-            <p>Average Price</p>
-            <p>0.00</p>
+        <div className="flex gap-2 flex-col w-full my-12">
+          <p>Slippage</p>
+          <div className="mx-2">
+            <Slider
+              min={0.5}
+              max={1}
+              step={0.5}
+              marks={marks}
+              defaultValue={formik?.values?.slippage}
+              onChange={(val) => {
+                formik.setFieldValue("slippage", val);
+              }}
+              trackStyle={{ backgroundColor: "rgb(255 19 109)", height: 6 }} // blue
+              handleStyle={{
+                borderColor: "rgb(255 19 109)",
+                backgroundColor: "rgb(255 19 109)",
+              }}
+              railStyle={{ backgroundColor: "#1f1f1f", height: 6 }}
+            />
           </div>
-          <div className="flex flex-row justify-between items-center w-full">
-            <p>Average Price</p>
-            <p>0.00</p>
+        </div>{" "}
+        {currentTx && (
+          <div className="w-full my-4 flex flex-row justify-between">
+            <p>Transaction Hash:</p>
+            <p
+              className="text-brand underline cursor-pointer"
+              onClick={() => {
+                window.open(
+                  `https://mainnet.qie.digital/tx/${currentTx}`,
+                  "_blank"
+                );
+              }}
+            >
+              {maskValue({
+                str: currentTx,
+                enableCopyButton: false,
+              })}
+            </p>
           </div>
-        </div>
-
+        )}
         <Button
           className={
             "text-xl border w-full rounded h-14 cursor-pointer bg-transparent"
@@ -301,7 +371,7 @@ const SwapComponent = () => {
             formik.setFieldValue("fromCurrency", val);
             setOpenModalFrom(false);
           }}
-          tokenList={tokenListData}
+          tokenList={tokenList?.fromTokenList}
         />
       )}
       {openModalTo && (
@@ -312,7 +382,7 @@ const SwapComponent = () => {
             formik.setFieldValue("toCurrency", val);
             setOpenModalTo(false);
           }}
-          tokenList={tokenListData}
+          tokenList={tokenList?.toTokenList}
         />
       )}
     </div>
