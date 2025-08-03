@@ -10,15 +10,25 @@ import { useAccount } from "wagmi";
 import { addLiquidityERC20Pair, useTokenList } from "@/service/queries";
 import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
-
+import Slider, { Range } from "rc-slider";
+import "rc-slider/assets/index.css";
 const validationSchema = Yup.object().shape({
   fromValue: Yup.string().required("From value is required"),
   toValue: Yup.string().required("To value is required"),
+  slippage: Yup.number()
+    .required("Slippage is required")
+    .min(0.5, "Slippage must be at least 0.5")
+    .max(1, "Slippage cannot be more than 1"),
 });
+const marks = {
+  0.5: "0.5",
+  1: "1",
+};
 const Liquidity = () => {
   const [openModalFrom, setOpenModalFrom] = useState(false);
   const [openModalTo, setOpenModalTo] = useState(false);
   const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
+  const [isLoading, setIsLoading] = useState(false);
 
   const { address } = useAccount();
   const signer = useEthersSigner();
@@ -27,6 +37,7 @@ const Liquidity = () => {
     initialValues: {
       fromValue: "",
       toValue: "",
+      slippage: 0.5,
       fromCurrency: {},
       toCurrency: {},
     },
@@ -36,14 +47,18 @@ const Liquidity = () => {
     },
   });
 
-  const { balance: fromBalance, error } = useTokenBalance({
+  const {
+    balance: fromBalance,
+    error,
+    refetch: refetchFromBalance,
+  } = useTokenBalance({
     tokenAddress: formik?.values?.fromCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.fromCurrency?.chainId,
     rpcUrl: "https://rpc1mainnet.qie.digital",
   });
 
-  const { balance: toBalance } = useTokenBalance({
+  const { balance: toBalance, refetch: refetchToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.toCurrency?.chainId,
@@ -51,6 +66,7 @@ const Liquidity = () => {
   });
   const submissionHandler = async () => {
     try {
+      setIsLoading(true);
       if (
         formik?.values?.fromCurrency?.address &&
         formik?.values?.toCurrency?.address
@@ -61,22 +77,33 @@ const Liquidity = () => {
           amountB: formik?.values?.toValue,
           provider: provider,
           signer: signer,
-          slippage: 1,
+          slippage: formik?.values?.slippage,
           tokenA: formik?.values?.fromCurrency,
           tokenB: formik?.values?.toCurrency,
         });
-        console.log(hash, "asdasdasd");
       }
+      await refetchFromBalance();
+      await refetchToBalance();
+      setIsLoading(false);
     } catch (error) {
       console.log(error, "error in add liquidity");
+      setIsLoading(false);
     }
   };
 
-  // const fromTokenList = useMemo(() => {}, [formik?.values]);
-  // const toTokenList = useMemo(() => {}, []);
+  const tokenList = useMemo(() => {
+    return {
+      fromTokenList: tokenListData?.filter(
+        (item) => item?.address != formik?.values?.toCurrency?.address
+      ),
+      toTokenList: tokenListData?.filter(
+        (item) => item?.address != formik?.values?.fromCurrency?.address
+      ),
+    };
+  }, [tokenListData, formik.values]);
 
   return (
-    <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] h-[500px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d]">
+    <div className="flex items-center justify-center flex-col bg-muted/20 mt-10 w-full md:w-[600px] min-h-[600px] rounded-2xl backdrop-blur-3xl ring ring-[#ff136d]">
       <div className=" w-full items-center justify-center flex">
         <h2 className="text-2xl font-semibold">Add Liquidity</h2>
       </div>
@@ -92,9 +119,9 @@ const Liquidity = () => {
               {formik.values?.fromCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.fromCurrency?.icon}
+                    src={formik.values?.fromCurrency?.logoURI}
                     alt=""
-                    className="object-contain h-4"
+                    className="object-contain h-4 w-4"
                   />
                   <p className="text-xs md:text-sm">
                     {formik.values?.fromCurrency?.symbol}
@@ -135,9 +162,9 @@ const Liquidity = () => {
               {formik.values?.toCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.toCurrency?.icon}
+                    src={formik.values?.toCurrency?.logoURI}
                     alt=""
-                    className="object-contain h-4"
+                    className="object-contain h-4 w-4"
                   />
                   <p className="text-xs md:text-sm">
                     {formik.values?.toCurrency?.symbol}
@@ -166,16 +193,39 @@ const Liquidity = () => {
             </div>
           </div>
         </div>
+        <div className="flex gap-2 flex-col w-full my-12">
+          <p>Slippage</p>
+          <div className="mx-2">
+            <Slider
+              min={0.5}
+              max={1}
+              step={0.5}
+              marks={marks}
+              defaultValue={formik?.values?.slippage}
+              onChange={(val) => {
+                formik.setFieldValue("slippage", val);
+              }}
+              trackStyle={{ backgroundColor: "rgb(255 19 109)", height: 6 }} // blue
+              handleStyle={{
+                borderColor: "rgb(255 19 109)",
+                backgroundColor: "rgb(255 19 109)",
+              }}
+              railStyle={{ backgroundColor: "#1f1f1f", height: 6 }}
+            />
+          </div>
+        </div>
 
         <Button
           className={
             "text-xl border w-full rounded h-14 cursor-pointer bg-transparent"
           }
           onClick={() => {
-            formik.handleSubmit();
+            if (!isLoading) {
+              formik.handleSubmit();
+            }
           }}
         >
-          Exexute
+          {isLoading ? `Please Wait...` : `Add Liquidity`}
         </Button>
       </div>
 
@@ -187,7 +237,7 @@ const Liquidity = () => {
             formik.setFieldValue("fromCurrency", val);
             setOpenModalFrom(false);
           }}
-          tokenList={tokenListData}
+          tokenList={tokenList?.fromTokenList}
         />
       )}
       {openModalTo && (
@@ -198,7 +248,7 @@ const Liquidity = () => {
             formik.setFieldValue("toCurrency", val);
             setOpenModalTo(false);
           }}
-          tokenList={tokenListData}
+          tokenList={tokenList?.toTokenList}
         />
       )}
     </div>

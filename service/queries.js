@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 const { api, post } = require("./apiService");
 import { Contract, parseUnits, toBigInt } from "ethers";
 import { readContract } from "@wagmi/core";
+import { getAddress } from "ethers";
 
 import routerAbi from "@/abi/router.json";
 import factoryAbi from "@/abi/factory.json";
@@ -152,67 +153,243 @@ export async function addLiquidityERC20Pair({
   return tx;
 }
 
-export async function executeTokenSwap({
+// export async function executeTokenSwap({
+//   tokenIn,
+//   tokenOut,
+//   amountIn,
+//   slippage,
+//   signer,
+//   account,
+// }) {
+//   const routerAddress = QIEDEXRouter_address;
+//   const router = new Contract(routerAddress, routerAbi, signer);
+
+//   const tokenInContract = new Contract(tokenIn.address, erc20Abi, signer);
+
+//   // 1. Convert amountIn to wei
+//   const amountInWei = parseUnits(amountIn, tokenIn.decimals);
+
+//   // 2. Get expected output amount
+//   const path = [tokenIn.address, tokenOut.address];
+//   const amountsOut = await router.getAmountsOut(amountInWei, path);
+//   const expectedOut = amountsOut[1];
+
+//   // 3. Calculate minimum output amount with slippage
+//   const slippageFactor = 1 - parseFloat(slippage) / 100;
+//   const minOut =
+//     (expectedOut * parseUnits(slippageFactor.toString(), 18)) /
+//     parseUnits("1", 18);
+//   const amountOutMin = minOut;
+
+//   // 4. Approve token if needed
+//   const allowance = await tokenInContract.allowance(account, routerAddress);
+//   if (allowance < amountInWei) {
+//     const approveTx = await tokenInContract.approve(routerAddress, amountInWei);
+//     await approveTx.wait();
+//   }
+
+//   // 5. Set deadline (10 minutes from now)
+//   const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
+
+//   // 6. Execute the swap
+//   const tx = await router.swapExactTokensForTokens(
+//     amountInWei,
+//     amountOutMin,
+//     path,
+//     account,
+//     deadline
+//   );
+
+//   await tx.wait();
+//   return tx;
+// }
+
+// export async function pairChecker({ tokenA, tokenB, provider }) {
+//   try {
+//     const factoryAddress = QIDEX_Factory_address;
+//     const factory = new Contract(factoryAddress, factoryAbi, provider);
+//     const pairAddress = await factory.getPair(tokenA.address, tokenB.address);
+//     const isNewPair =
+//       pairAddress === "0x0000000000000000000000000000000000000000";
+
+//     return isNewPair;
+//   } catch (error) {
+//     throw false;
+//   }
+// }
+
+//////////////////swapp/////////////////////////
+
+//Check if Pair Exists
+export async function checkPairExists(tokenA, tokenB, provider) {
+  try {
+    const factoryContract = new Contract(
+      QIDEX_Factory_address,
+      factoryAbi,
+      provider
+    );
+
+    const pairAddress = await factoryContract.getPair(tokenA, tokenB);
+
+    return pairAddress !== "0x0000000000000000000000000000000000000000"
+      ? pairAddress
+      : null;
+  } catch (error) {
+    console.error("Error checking pair:", error);
+    return null;
+  }
+}
+// Get Reserves from the Pair
+// export async function getReserves(pairAddress, tokenIn, provider) {
+//   try {
+//     const pairContract = new Contract(pairAddress, pairABI, provider);
+
+//     const [reserves, token0] = await Promise.all([
+//       pairContract.getReserves(),
+//       pairContract.token0(),
+//     ]);
+
+//     const isToken0 = getAddress(tokenIn) === getAddress(token0);
+
+//     return {
+//       reserveIn: isToken0 ? reserves[0] : reserves[1],
+//       reserveOut: isToken0 ? reserves[1] : reserves[0],
+//     };
+//   } catch (error) {
+//     console.error("Failed to fetch reserves:", error);
+//     return null;
+//   }
+// }
+
+export async function getReserves(pairAddress, tokenIn, provider) {
+  const pairContract = new Contract(pairAddress, pairABI, provider);
+  const [reserve0, reserve1] = await pairContract.getReserves();
+  const token0 = await pairContract.token0();
+
+  const isToken0 = tokenIn.toLowerCase() === token0.toLowerCase();
+  return {
+    reserveIn: isToken0 ? reserve0 : reserve1,
+    reserveOut: isToken0 ? reserve1 : reserve0,
+  };
+}
+
+export async function getAmountOut(amountIn, tokenIn, tokenOut, provider) {
+  try {
+    const routerContract = new Contract(
+      QIEDEXRouter_address,
+      routerAbi,
+      provider
+    );
+    const path = [tokenIn, tokenOut];
+
+    const amounts = await routerContract.getAmountsOut(amountIn, path);
+
+    return amounts[1];
+  } catch (error) {
+    console.error("getAmountOut failed:", error);
+    return 0n;
+  }
+}
+
+export function calculateMinAmountOut(amountOut, slippagePercent) {
+  const slippageFactor = BigInt(Math.floor((1 - slippagePercent / 100) * 1000));
+  return (amountOut * slippageFactor) / 1000n;
+}
+
+export async function handleSwapCalculation({
   tokenIn,
   tokenOut,
   amountIn,
-  slippage,
-  signer,
-  account,
+  slippagePercent,
+  provider,
 }) {
-  const routerAddress = QIEDEXRouter_address;
-  const router = new Contract(routerAddress, routerAbi, signer);
-
-  const tokenInContract = new Contract(tokenIn.address, erc20Abi, signer);
-
-  // 1. Convert amountIn to wei
-  const amountInWei = parseUnits(amountIn, tokenIn.decimals);
-
-  // 2. Get expected output amount
-  const path = [tokenIn.address, tokenOut.address];
-  const amountsOut = await router.getAmountsOut(amountInWei, path);
-  const expectedOut = amountsOut[1];
-
-  // 3. Calculate minimum output amount with slippage
-  const slippageFactor = 1 - parseFloat(slippage) / 100;
-  const minOut =
-    (expectedOut * parseUnits(slippageFactor.toString(), 18)) /
-    parseUnits("1", 18);
-  const amountOutMin = minOut;
-
-  // 4. Approve token if needed
-  const allowance = await tokenInContract.allowance(account, routerAddress);
-  if (allowance < amountInWei) {
-    const approveTx = await tokenInContract.approve(routerAddress, amountInWei);
-    await approveTx.wait();
-  }
-
-  // 5. Set deadline (10 minutes from now)
-  const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 10);
-
-  // 6. Execute the swap
-  const tx = await router.swapExactTokensForTokens(
-    amountInWei,
-    amountOutMin,
-    path,
-    account,
-    deadline
-  );
-
-  await tx.wait();
-  return tx;
-}
-
-export async function pairChecker({ tokenA, tokenB, provider }) {
   try {
-    const factoryAddress = QIDEX_Factory_address;
-    const factory = new Contract(factoryAddress, factoryAbi, provider);
-    const pairAddress = await factory.getPair(tokenA.address, tokenB.address);
-    const isNewPair =
-      pairAddress === "0x0000000000000000000000000000000000000000";
+    const pairAddress = await checkPairExists(tokenIn, tokenOut, provider);
 
-    return isNewPair;
+    if (!pairAddress) {
+      return {
+        isValid: false,
+        message: "Pair does not exist",
+      };
+    }
+
+    const { reserveOut } = await getReserves(pairAddress, tokenIn, provider);
+
+    const expectedAmountOut = await getAmountOut(
+      amountIn,
+      tokenIn,
+      tokenOut,
+      provider
+    );
+
+    const minAmountOut = calculateMinAmountOut(
+      expectedAmountOut,
+      slippagePercent
+    );
+
+    if (expectedAmountOut > reserveOut) {
+      return {
+        isValid: false,
+        message: "Insufficient liquidity",
+      };
+    }
+
+    return {
+      isValid: true,
+      message: "",
+      expectedAmountOut,
+      minAmountOut,
+      pairAddress,
+    };
   } catch (error) {
-    throw false;
+    console.error("Swap calculation error:", error);
+    return {
+      isValid: false,
+      message: "Something went wrong",
+    };
   }
 }
+
+export const swapHandler = async ({
+  provider, // BrowserProvider or JsonRpcProvider
+  amountIn, // BigInt or string
+  amountOutMin, // BigInt or string
+  path, // [tokenIn, tokenOut]
+  account, // user wallet address
+  signer,
+}) => {
+  try {
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 10;
+
+    const tokenIn = path[0];
+
+    const tokenContract = new Contract(tokenIn, erc20Abi, signer);
+    const currentAllowance = await tokenContract.allowance(
+      account,
+      QIEDEXRouter_address
+    );
+
+    if (BigInt(currentAllowance) < BigInt(amountIn)) {
+      const approveTx = await tokenContract.approve(
+        QIEDEXRouter_address,
+        amountIn
+      );
+      await approveTx.wait();
+    }
+
+    const router = new Contract(QIEDEXRouter_address, routerAbi, signer);
+    const tx = await router.swapExactTokensForTokens(
+      amountIn,
+      amountOutMin,
+      path,
+      account,
+      deadline
+    );
+
+    await tx.wait();
+    return tx;
+  } catch (error) {
+    console.error("Swap failed:", error);
+    throw error;
+  }
+};

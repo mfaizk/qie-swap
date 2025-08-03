@@ -11,6 +11,8 @@ import { uploadTokenLogo } from "@/service/queries";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { queryClient } from "@/providers/blockchain-provider";
+import Image from "next/image";
+import clsx from "clsx";
 
 const validationSchema = Yup.object().shape({
   address: Yup.string().required("From value is required"),
@@ -151,35 +153,33 @@ const AddToken = () => {
         {currentTokenData?.name && (
           <>
             <div className="flex gap-2 flex-col w-full">
-              <div className="mt-4 relative flex items-center w-full ">
+              <div className="mt-4 relative flex items-center w-full  ">
                 <input
                   type="file"
-                  name="icon"
                   ref={fileInputRef}
                   onChange={(e) => {
-                    console.log(e.target.files[0], "asdasdsd");
-
                     setFile(e.target.files[0]);
                   }}
                   placeholder="0x"
-                  className={"h-14 w-full md:w-lg "}
+                  className={
+                    "ring ring-gray-600/40 w-56 bg-gray-700/80 text-white p-2 rounded"
+                  }
                 />
-              </div>
-              <div className="px-2 flex justify-between items-center">
-                {/* <p className="text-xs text-red-500"> {formik?.errors?.icon}</p> */}
               </div>
             </div>
 
-            <Button
-              className={
-                "text-xl border w-full rounded h-14 cursor-pointer bg-transparent"
-              }
-              onClick={() => {
-                formik.handleSubmit();
-              }}
-            >
-              {addTokenPending ? `Executing...` : `Exexute`}
-            </Button>
+            {file && (
+              <Button
+                className={clsx(
+                  "text-xl border w-full rounded h-14 cursor-pointer bg-transparent "
+                )}
+                onClick={() => {
+                  formik.handleSubmit();
+                }}
+              >
+                {addTokenPending ? `Adding...` : `Add Detail`}
+              </Button>
+            )}
           </>
         )}
       </div>

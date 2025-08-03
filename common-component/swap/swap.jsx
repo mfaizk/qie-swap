@@ -10,15 +10,30 @@ import { GraphModal } from "./graph";
 import { useTokenBalance } from "@/hooks/useTokenBalance";
 import { useAccount, useConfig } from "wagmi";
 import {
+  calculateMinAmountOut,
+  checkPairExists,
   executeTokenSwap,
+  getAmountOut,
+  getReserves,
+  handleSwapCalculation,
   pairChecker,
+  swapHandler,
   useMinAmountOut,
   useTokenList,
 } from "@/service/queries";
 import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
-import { Contract, formatEther, parseUnits } from "ethers";
-import { QIEDEXRouter_address } from "@/config/blockchain";
+import {
+  Contract,
+  formatEther,
+  formatUnits,
+  parseEther,
+  parseUnits,
+} from "ethers";
+import {
+  QIE_BLOCKCHAIN_CONFIG,
+  QIEDEXRouter_address,
+} from "@/config/blockchain";
 
 import routerAbi from "@/abi/router.json";
 import factoryAbi from "@/abi/factory.json";
@@ -28,11 +43,6 @@ const validationSchema = Yup.object().shape({
   toValue: Yup.string().required("To value is required"),
 });
 
-const BUTTON_STATES = {
-  INSUFFICIENT_LIQUIDITY: "INSUFFICIENT LIQUIDITY",
-  PAIR_NOT_EXIST: "PAIR NOT EXIST",
-};
-
 const SwapComponent = () => {
   const [openModalFrom, setOpenModalFrom] = useState(false);
   const [openModalTo, setOpenModalTo] = useState(false);
@@ -41,11 +51,14 @@ const SwapComponent = () => {
   const [graphModal, setGraphModal] = useState(false);
   const config = useConfig();
   const signer = useEthersSigner();
-  const [isButtonActive, setIsButtonActive] = useState(true);
-  const [buttonMessage, setButtonMessage] = useState("Execute");
+  const provider = useEthersProvider();
+  const [buttonState, setbuttonState] = useState({
+    isValid: false,
+    message: "Swap",
+  });
+
   const { data: tokenListData, isLoading: tokenListLoading } = useTokenList();
 
-  const provider = useEthersProvider();
   const formik = useFormik({
     initialValues: {
       fromValue: "",
@@ -55,101 +68,91 @@ const SwapComponent = () => {
     },
     validationSchema: validationSchema,
     onSubmit: (values) => {
-      submissionHandler();
+      submissionHandler(values);
     },
   });
 
-  const fetchMinAmountOut = async () => {
-    try {
-      const tokenIn = {
-        address: formik?.values?.fromCurrency?.address,
-        decimals: formik?.values?.fromCurrency?.decimals,
-      };
-      const tokenOut = {
-        address: formik?.values?.toCurrency?.address,
-        decimals: formik?.values?.toCurrency?.decimals,
-      };
-      const amountIn = formik?.values?.fromValue;
-      const slippage = 1;
-
-      const router = new Contract(QIEDEXRouter_address, routerAbi, signer);
-
-      const amountInWei = parseUnits(amountIn, tokenIn.decimals);
-      const path = [tokenIn.address, tokenOut.address];
-
-      const amountsOut = await router.getAmountsOut(amountInWei, path);
-      const expectedOut = amountsOut[1];
-
-      const slippageFactor = 1 - parseFloat(slippage) / 100;
-      const slippageFactorBigInt = parseUnits(slippageFactor.toString(), 18);
-      const base = parseUnits("1", 18);
-
-      const minOut = (expectedOut * slippageFactorBigInt) / base;
-      const ethrValue = formatEther(minOut.toString());
-      formik.setFieldValue("toValue", ethrValue);
-    } catch (err) {
-      console.log(err, "asdasd");
-      // setAmountOutMin(null);
-    }
-  };
-  useEffect(() => {
-    fetchMinAmountOut();
-  }, [formik?.values?.fromValue]);
-  const handlerButtonState = async () => {
-    try {
-      const isNewPair = await pairChecker({
-        provider: provider,
-        tokenA: formik?.values?.fromCurrency,
-        tokenB: formik?.values?.toCurrency,
-      });
-      if (isNewPair) {
-        setIsButtonActive(false);
-        setButtonMessage("Pair does not exist");
-      } else {
-        setIsButtonActive(true);
-        setButtonMessage("Execute");
-      }
-    } catch (error) {
-      console.log(error);
-      setIsButtonActive(false);
-      setButtonMessage("Pair does not exist");
-    }
-  };
-
-  useEffect(() => {
-    handlerButtonState();
-  }, [formik.values?.fromCurrency, formik?.values?.toCurrency]);
-
-  const { balance: fromBalance, error } = useTokenBalance({
+  const {
+    balance: fromBalance,
+    error,
+    refetch: refetchFromBalance,
+  } = useTokenBalance({
     tokenAddress: formik?.values?.fromCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.fromCurrency?.chainId,
-    rpcUrl: "https://rpc1mainnet.qie.digital",
+    rpcUrl: QIE_BLOCKCHAIN_CONFIG.rpc,
   });
 
-  const { balance: toBalance } = useTokenBalance({
+  const { balance: toBalance, refetch: refetchToBalance } = useTokenBalance({
     tokenAddress: formik?.values?.toCurrency?.address,
     userAddress: address,
     chainId: formik?.values?.toCurrency?.chainId,
-    rpcUrl: "https://rpc1mainnet.qie.digital",
+    rpcUrl: QIE_BLOCKCHAIN_CONFIG.rpc,
   });
 
-  const submissionHandler = async () => {
+  const getToAmount = async (value) => {
     try {
-      const hash = await executeTokenSwap({
-        tokenIn: {
-          address: formik?.values?.fromCurrency?.address,
-          decimals: formik?.values?.fromCurrency?.decimals,
-        },
-        tokenOut: {
-          address: formik?.values?.toCurrency?.address,
-          decimals: formik?.values?.toCurrency?.decimals,
-        },
-        amountIn: formik?.values?.fromValue,
-        slippage: "1",
-        signer: signer,
-        account: address,
+      const tokenIn = formik?.values?.fromCurrency?.address;
+      const tokenOut = formik?.values?.toCurrency?.address;
+      const valueInWei = parseUnits(value);
+
+      const expectedAmountOut = await getAmountOut(
+        valueInWei,
+        tokenIn,
+        tokenOut,
+        provider
+      );
+      const minAmountOut = calculateMinAmountOut(expectedAmountOut, 1);
+      const amountOutInEther = formatUnits(minAmountOut);
+      formik.setFieldValue("toValue", amountOutInEther);
+
+      const pairAddress = await checkPairExists(tokenIn, tokenOut, provider);
+
+      if (!pairAddress) {
+        setbuttonState({
+          isValid: false,
+          message: "Pair does not exist",
+        });
+        return;
+      }
+
+      const { reserveOut } = await getReserves(pairAddress, tokenIn, provider);
+      const amountOreserveOut = formatUnits(reserveOut);
+
+      if (expectedAmountOut > reserveOut) {
+        setbuttonState({
+          isValid: false,
+          message: "Insufficient liquidity",
+        });
+        return;
+      }
+
+      setbuttonState({
+        isValid: true,
+        message: "Swap",
       });
+    } catch (error) {
+      console.log(error, "errror");
+    }
+  };
+
+  const submissionHandler = async (values) => {
+    try {
+      const fromValueInWei = parseUnits(values?.fromValue);
+      const toValueInWei = parseUnits(values?.toValue);
+
+      const path = [values?.fromCurrency?.address, values?.toCurrency?.address];
+
+      const tx = await swapHandler({
+        account: address,
+        amountIn: fromValueInWei,
+        amountOutMin: toValueInWei,
+        path: path,
+        provider: provider,
+        signer: signer,
+      });
+      await refetchFromBalance();
+      await refetchToBalance();
     } catch (error) {
       console.log(error);
     }
@@ -183,7 +186,7 @@ const SwapComponent = () => {
               {formik.values?.fromCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.fromCurrency?.icon}
+                    src={formik.values?.fromCurrency?.logoURI}
                     alt=""
                     className="object-contain h-4"
                   />
@@ -198,7 +201,10 @@ const SwapComponent = () => {
             <Input
               type="text"
               name="fromValue"
-              onChange={formik.handleChange}
+              onChange={(e) => {
+                formik.handleChange(e);
+                getToAmount(e?.target?.value);
+              }}
               value={formik.values.fromValue}
               placeholder="0.00"
               className={"h-14 w-full md:w-lg pl-36 md:pl-40"}
@@ -226,7 +232,7 @@ const SwapComponent = () => {
               {formik.values?.toCurrency?.symbol ? (
                 <div className="flex items-center gap-2">
                   <img
-                    src={formik.values?.toCurrency?.icon}
+                    src={formik.values?.toCurrency?.logoURI}
                     alt=""
                     className="object-contain h-4"
                   />
@@ -240,7 +246,7 @@ const SwapComponent = () => {
             </div>
             <Input
               name="toValue"
-              onChange={formik.handleChange}
+              // onChange={formik.handleChange}
               value={formik.values.toValue}
               type="text"
               placeholder="0.00"
@@ -272,13 +278,13 @@ const SwapComponent = () => {
           className={
             "text-xl border w-full rounded h-14 cursor-pointer bg-transparent"
           }
-          disabled={isButtonActive}
           onClick={() => {
-            // handleClick
-            formik.handleSubmit();
+            if (buttonState?.isValid) {
+              formik.handleSubmit();
+            }
           }}
         >
-          {buttonMessage}
+          {`${buttonState?.message}`}
         </Button>
       </div>
 

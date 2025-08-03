@@ -158,7 +158,7 @@ const NativeSwap = () => {
     if (writeContractPending) {
       return {
         isValid: false,
-        text: "Executing..",
+        text: "Please wait..",
       };
     }
     if (fromBalanceLoading) {
