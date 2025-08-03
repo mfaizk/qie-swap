@@ -12,6 +12,7 @@ import { useEthersSigner } from "@/hooks/useEthersSigner";
 import { useEthersProvider } from "@/hooks/useEthersProvider";
 import Slider, { Range } from "rc-slider";
 import "rc-slider/assets/index.css";
+import { toast } from "sonner";
 
 const marks = {
   0.5: "0.5",
@@ -119,8 +120,10 @@ const Liquidity = () => {
       await refetchFromBalance();
       await refetchToBalance();
       setIsLoading(false);
+      toast.success("Transaction successful");
     } catch (error) {
       console.log(error, "error in add liquidity");
+      toast.error(error?.shortMessage || "Transaction Failed");
       setIsLoading(false);
     }
   };
